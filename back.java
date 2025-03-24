@@ -15,6 +15,16 @@ class ResourceAllocationGraph {
     public void addResource(String resource) {
         adjList.putIfAbsent(resource, new ArrayList<>());
     }
+    
+    //Implement request & allocation edges
+public void requestResource(String process, String resource) {
+    adjList.get(process).add(resource);
+}
+
+public void allocateResource(String resource, String process) {
+    adjList.get(resource).add(process);
+}
+
 
     public void displayGraph() {
         for (String node : adjList.keySet()) {
