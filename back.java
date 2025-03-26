@@ -1,4 +1,3 @@
-// Initial Backend Setup
 import java.util.*;
 
 class ResourceAllocationGraph {
@@ -58,5 +57,20 @@ class ResourceAllocationGraph {
         for (String node : adjList.keySet()) {
             System.out.println(node + " -> " + adjList.get(node));
         }
+    }
+
+    // Member 1: Testing the graph 
+    public static void main(String[] args) {
+        ResourceAllocationGraph rag = new ResourceAllocationGraph();
+        
+        rag.addProcess("P1");
+        rag.addProcess("P2");
+        rag.addResource("R1");
+
+        rag.requestResource("P1", "R1");
+        rag.allocateResource("R1", "P2");
+
+        rag.displayGraph();
+        System.out.println("Deadlock? " + rag.checkDeadlock());
     }
 }
