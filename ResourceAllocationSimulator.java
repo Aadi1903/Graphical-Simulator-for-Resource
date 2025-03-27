@@ -1,143 +1,100 @@
 import java.util.*;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
 
-// Backend Logic
-class ResourceAllocationGraph {
-    private Map<String, List<String>> adjList;
-
-    public ResourceAllocationGraph() {
-        adjList = new HashMap<>();
-    }
+class ResourceAllocationSimulator {
+    private Map<String, List<String>> allocationMap = new HashMap<>();
+    private Map<String, String> resourceMap = new HashMap<>(); // Tracks which resource is allocated to which process
+    private List<String[]> requestQueue = new ArrayList<>(); // Stores blocked requests
 
     public void addProcess(String process) {
-        adjList.putIfAbsent(process, new ArrayList<>());
+        allocationMap.put(process, new ArrayList<>());
+        System.out.println("Added Process: " + process);
     }
 
     public void addResource(String resource) {
-        adjList.putIfAbsent(resource, new ArrayList<>());
+        resourceMap.put(resource, null); // Resource is initially free
+        System.out.println("Added Resource: " + resource);
     }
 
     public void requestResource(String process, String resource) {
-        adjList.get(process).add(resource);
-    }
-
-    public void allocateResource(String resource, String process) {
-        adjList.get(resource).add(process);
-    }
-
-    private boolean detectCycle(String node, Set<String> visited, Set<String> stack) {
-        if (stack.contains(node)) return true;
-        if (visited.contains(node)) return false;
-
-        visited.add(node);
-        stack.add(node);
+        System.out.println(process + " requested " + resource);
         
-        for (String neighbor : adjList.getOrDefault(node, new ArrayList<>())) {
-            if (detectCycle(neighbor, visited, stack)) return true;
+        if (resourceMap.get(resource) == null) { // If resource is free
+            allocateResource(process, resource);
+        } else { // If resource is occupied, block the process
+            System.out.println(process + " is BLOCKED, waiting for " + resource);
+            requestQueue.add(new String[]{process, resource});
         }
-
-        stack.remove(node);
-        return false;
     }
 
-    public boolean checkDeadlock() {
+    private void allocateResource(String process, String resource) {
+        allocationMap.get(process).add(resource);
+        resourceMap.put(resource, process);
+        System.out.println("Allocated " + resource + " to " + process);
+    }
+
+    public void releaseResource(String process, String resource) {
+        if (resourceMap.get(resource).equals(process)) {
+            resourceMap.put(resource, null); // Free the resource
+            allocationMap.get(process).remove(resource);
+            System.out.println(process + " released " + resource);
+
+            // Check if any blocked request can now be fulfilled
+            Iterator<String[]> iterator = requestQueue.iterator();
+            while (iterator.hasNext()) {
+                String[] req = iterator.next();
+                if (req[1].equals(resource)) {
+                    allocateResource(req[0], resource);
+                    iterator.remove(); // Remove from blocked queue
+                }
+            }
+        }
+    }
+
+    public void detectDeadlock() {
         Set<String> visited = new HashSet<>();
         Set<String> stack = new HashSet<>();
-
-        for (String node : adjList.keySet()) {
-            if (detectCycle(node, visited, stack)) return true;
+        for (String process : allocationMap.keySet()) {
+            if (isCyclic(process, visited, stack)) {
+                System.out.println("Deadlock Detected!");
+                return;
+            }
         }
+        System.out.println("No Deadlock Detected");
+    }
+
+    private boolean isCyclic(String process, Set<String> visited, Set<String> stack) {
+        if (stack.contains(process)) return true;
+        if (visited.contains(process)) return false;
+
+        visited.add(process);
+        stack.add(process);
+
+        for (String resource : allocationMap.get(process)) {
+            String nextProcess = resourceMap.get(resource);
+            if (nextProcess != null && isCyclic(nextProcess, visited, stack)) {
+                return true;
+            }
+        }
+        stack.remove(process);
         return false;
-    }
-
-    public void displayGraph() {
-        for (String node : adjList.keySet()) {
-            System.out.println(node + " -> " + adjList.get(node));
-        }
-    }
-}
-
-// GUI using Swing
-class ResourceAllocationSimulator {
-    private ResourceAllocationGraph graph;
-    private JFrame frame;
-    private JTextArea outputArea;
-    private JTextField processField, resourceField;
-
-    public ResourceAllocationSimulator() {
-        graph = new ResourceAllocationGraph();
-        frame = new JFrame("Resource Allocation Simulator");
-        frame.setSize(500, 400);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(new FlowLayout());
-
-        JLabel processLabel = new JLabel("Process:");
-        processField = new JTextField(10);
-        JLabel resourceLabel = new JLabel("Resource:");
-        resourceField = new JTextField(10);
-        JButton addProcessBtn = new JButton("Add Process");
-        JButton addResourceBtn = new JButton("Add Resource");
-        JButton requestBtn = new JButton("Request Resource");
-        JButton allocateBtn = new JButton("Allocate Resource");
-        JButton checkDeadlockBtn = new JButton("Check Deadlock");
-        outputArea = new JTextArea(15, 40);
-        outputArea.setEditable(false);
-
-        addProcessBtn.addActionListener(e -> {
-            String process = processField.getText();
-            if (!process.isEmpty()) {
-                graph.addProcess(process);
-                outputArea.append("Added Process: " + process + "\n");
-            }
-        });
-
-        addResourceBtn.addActionListener(e -> {
-            String resource = resourceField.getText();
-            if (!resource.isEmpty()) {
-                graph.addResource(resource);
-                outputArea.append("Added Resource: " + resource + "\n");
-            }
-        });
-
-        requestBtn.addActionListener(e -> {
-            String process = processField.getText();
-            String resource = resourceField.getText();
-            if (!process.isEmpty() && !resource.isEmpty()) {
-                graph.requestResource(process, resource);
-                outputArea.append("Process " + process + " requested resource " + resource + "\n");
-            }
-        });
-
-        allocateBtn.addActionListener(e -> {
-            String process = processField.getText();
-            String resource = resourceField.getText();
-            if (!process.isEmpty() && !resource.isEmpty()) {
-                graph.allocateResource(resource, process);
-                outputArea.append("Resource " + resource + " allocated to process " + process + "\n");
-            }
-        });
-
-        checkDeadlockBtn.addActionListener(e -> {
-            boolean deadlock = graph.checkDeadlock();
-            outputArea.append(deadlock ? "Deadlock Detected!\n" : "No Deadlock Detected.\n");
-        });
-
-        frame.add(processLabel);
-        frame.add(processField);
-        frame.add(resourceLabel);
-        frame.add(resourceField);
-        frame.add(addProcessBtn);
-        frame.add(addResourceBtn);
-        frame.add(requestBtn);
-        frame.add(allocateBtn);
-        frame.add(checkDeadlockBtn);
-        frame.add(new JScrollPane(outputArea));
-        frame.setVisible(true);
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(ResourceAllocationSimulator::new);
+        ResourceAllocationSimulator simulator = new ResourceAllocationSimulator();
+        
+        // Sample scenario
+        simulator.addProcess("P1");
+        simulator.addProcess("P2");
+        
+        simulator.addResource("R1");
+        simulator.addResource("R2");
+        
+        simulator.requestResource("P1", "R1");
+        simulator.requestResource("P2", "R2");
+        
+        simulator.requestResource("P1", "R2"); // This should block P1
+        simulator.requestResource("P2", "R1"); // This should block P2
+        
+        simulator.detectDeadlock();
     }
 }
