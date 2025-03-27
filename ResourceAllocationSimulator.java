@@ -1,8 +1,9 @@
+import java.util.*;
 import javax.swing.*;
 import java.awt.*;
-import java.util.*;
+import java.awt.event.*;
 
-// Backend: Resource Allocation Graph
+// Backend Logic
 class ResourceAllocationGraph {
     private Map<String, List<String>> adjList;
 
@@ -44,100 +45,99 @@ class ResourceAllocationGraph {
     public boolean checkDeadlock() {
         Set<String> visited = new HashSet<>();
         Set<String> stack = new HashSet<>();
-        
+
         for (String node : adjList.keySet()) {
             if (detectCycle(node, visited, stack)) return true;
         }
         return false;
     }
 
-    public Map<String, List<String>> getGraph() {
-        return adjList;
+    public void displayGraph() {
+        for (String node : adjList.keySet()) {
+            System.out.println(node + " -> " + adjList.get(node));
+        }
     }
 }
 
-// GUI: Resource Allocation Graph Visualization
-class ResourceAllocationGUI extends JFrame {
+// GUI using Swing
+class ResourceAllocationSimulator {
     private ResourceAllocationGraph graph;
-    private JTextArea displayArea;
+    private JFrame frame;
+    private JTextArea outputArea;
+    private JTextField processField, resourceField;
 
-    public ResourceAllocationGUI() {
+    public ResourceAllocationSimulator() {
         graph = new ResourceAllocationGraph();
-        setTitle("Resource Allocation Graph Simulator");
-        setSize(600, 400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
-        
-        displayArea = new JTextArea();
-        displayArea.setEditable(false);
-        add(new JScrollPane(displayArea), BorderLayout.CENTER);
-        
-        JPanel controlPanel = new JPanel();
+        frame = new JFrame("Resource Allocation Simulator");
+        frame.setSize(500, 400);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new FlowLayout());
+
+        JLabel processLabel = new JLabel("Process:");
+        processField = new JTextField(10);
+        JLabel resourceLabel = new JLabel("Resource:");
+        resourceField = new JTextField(10);
         JButton addProcessBtn = new JButton("Add Process");
         JButton addResourceBtn = new JButton("Add Resource");
         JButton requestBtn = new JButton("Request Resource");
         JButton allocateBtn = new JButton("Allocate Resource");
         JButton checkDeadlockBtn = new JButton("Check Deadlock");
-        
-        controlPanel.add(addProcessBtn);
-        controlPanel.add(addResourceBtn);
-        controlPanel.add(requestBtn);
-        controlPanel.add(allocateBtn);
-        controlPanel.add(checkDeadlockBtn);
-        add(controlPanel, BorderLayout.SOUTH);
+        outputArea = new JTextArea(15, 40);
+        outputArea.setEditable(false);
 
         addProcessBtn.addActionListener(e -> {
-            String process = JOptionPane.showInputDialog("Enter Process Name:");
-            if (process != null) {
+            String process = processField.getText();
+            if (!process.isEmpty()) {
                 graph.addProcess(process);
-                updateDisplay();
+                outputArea.append("Added Process: " + process + "\n");
             }
         });
 
         addResourceBtn.addActionListener(e -> {
-            String resource = JOptionPane.showInputDialog("Enter Resource Name:");
-            if (resource != null) {
+            String resource = resourceField.getText();
+            if (!resource.isEmpty()) {
                 graph.addResource(resource);
-                updateDisplay();
+                outputArea.append("Added Resource: " + resource + "\n");
             }
         });
 
         requestBtn.addActionListener(e -> {
-            String process = JOptionPane.showInputDialog("Enter Process Name:");
-            String resource = JOptionPane.showInputDialog("Enter Resource Name:");
-            if (process != null && resource != null) {
+            String process = processField.getText();
+            String resource = resourceField.getText();
+            if (!process.isEmpty() && !resource.isEmpty()) {
                 graph.requestResource(process, resource);
-                updateDisplay();
+                outputArea.append("Process " + process + " requested resource " + resource + "\n");
             }
         });
 
         allocateBtn.addActionListener(e -> {
-            String resource = JOptionPane.showInputDialog("Enter Resource Name:");
-            String process = JOptionPane.showInputDialog("Enter Process Name:");
-            if (process != null && resource != null) {
+            String process = processField.getText();
+            String resource = resourceField.getText();
+            if (!process.isEmpty() && !resource.isEmpty()) {
                 graph.allocateResource(resource, process);
-                updateDisplay();
+                outputArea.append("Resource " + resource + " allocated to process " + process + "\n");
             }
         });
 
         checkDeadlockBtn.addActionListener(e -> {
             boolean deadlock = graph.checkDeadlock();
-            JOptionPane.showMessageDialog(this, deadlock ? "Deadlock Detected!" : "No Deadlock Detected.");
+            outputArea.append(deadlock ? "Deadlock Detected!\n" : "No Deadlock Detected.\n");
         });
+
+        frame.add(processLabel);
+        frame.add(processField);
+        frame.add(resourceLabel);
+        frame.add(resourceField);
+        frame.add(addProcessBtn);
+        frame.add(addResourceBtn);
+        frame.add(requestBtn);
+        frame.add(allocateBtn);
+        frame.add(checkDeadlockBtn);
+        frame.add(new JScrollPane(outputArea));
+        frame.setVisible(true);
     }
 
-    private void updateDisplay() {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, List<String>> entry : graph.getGraph().entrySet()) {
-            sb.append(entry.getKey()).append(" -> ").append(entry.getValue()).append("\n");
-        }
-        displayArea.setText(sb.toString());
-    }
-}
-
-// Main class
-public class ResourceAllocationSimulator {
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new ResourceAllocationGUI().setVisible(true));
+        SwingUtilities.invokeLater(ResourceAllocationSimulator::new);
     }
 }
